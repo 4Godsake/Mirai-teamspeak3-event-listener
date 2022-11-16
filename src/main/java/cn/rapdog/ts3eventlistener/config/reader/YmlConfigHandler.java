@@ -45,14 +45,14 @@ public class YmlConfigHandler implements ConfigHandler {
         return (T) yaml.loadAs(is, clazz);
     }
 
-    private Map<String, Object> yml2Map(InputStream is) {
+    public Map<String, Object> yml2Map(InputStream is) {
         Yaml yaml = new Yaml();
         return yaml.load(is);
     }
 
     public Map<String, Object> mergeConfig(InputStream oldConfig, InputStream latestConfig) {
         YamlMapFactoryBean factory = new YamlMapFactoryBean();
-        factory.setResolutionMethod(YamlProcessor.ResolutionMethod.OVERRIDE_AND_IGNORE);
+        factory.setResolutionMethod(YamlProcessor.ResolutionMethod.FIRST_FOUND);
         // 后面的会覆盖前面的
         factory.setResources(new InputStreamResource(latestConfig), new InputStreamResource(oldConfig));
         return factory.getObject();

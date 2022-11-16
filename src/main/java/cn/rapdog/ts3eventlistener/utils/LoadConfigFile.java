@@ -1,6 +1,7 @@
 package cn.rapdog.ts3eventlistener.utils;
 
 import cn.hutool.core.comparator.VersionComparator;
+import cn.hutool.core.util.StrUtil;
 import cn.rapdog.ts3eventlistener.Ts3EventListenerPlugin;
 import cn.rapdog.ts3eventlistener.config.Config;
 import cn.rapdog.ts3eventlistener.config.EventConfig;
@@ -50,11 +51,15 @@ public class LoadConfigFile {
             Config config = readConfig(configFile.getPath());
             Config configFromResource = ymlConfigHandler.readConfigFile(configFromResourceStream);
             // 判断版本，合并配置
-            if (VersionComparator.INSTANCE.compare(config.getVersion(), configFromResource.getVersion()) < 0) {
+            String userConfigVersion = config != null && StrUtil.isNotEmpty(config.getVersion()) ? config.getVersion() : "0";
+            String defaultConfigVersion = configFromResource != null && StrUtil.isNotEmpty(configFromResource.getVersion()) ? configFromResource.getVersion() : "0";
+            if (VersionComparator.INSTANCE.compare(userConfigVersion, defaultConfigVersion) < 0) {
                 try (InputStream inputStream = Files.newInputStream(configFile.toPath())) {
-                    Map<String, Object> configMap = ymlConfigHandler.mergeConfig(configFromResourceStream, inputStream);
-                    ymlConfigHandler.dumpYml(configFile.getPath(),configMap);
-                    Ts3EventListenerPlugin.INSTANCE.getLogger().info("已合并新版本配置");
+                    //todo 合并有问题,注释无法合并，暂时直接替换
+//                    Map<String, Object> configMap = ymlConfigHandler.mergeConfig(Ts3EventListenerPlugin.INSTANCE.getResourceAsStream("config.yml"),inputStream);
+//                    ymlConfigHandler.dumpYml(configFile.getPath(),configMap);
+                    dumpConfigByDefault(ymlConfigHandler, configFile);
+                    Ts3EventListenerPlugin.INSTANCE.getLogger().warning("发现新版本配置文件，已替换配置文件为最新版本，请手动修改配置文件后使用");
                 }
             }
             GlobalData.config = readConfig(configFile.getPath());
@@ -90,10 +95,20 @@ public class LoadConfigFile {
         YmlConfigHandler ymlConfigHandler = new YmlConfigHandler(Config.class);
         try {
             return ymlConfigHandler.readConfigFile(configPath);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
-            Ts3EventListenerPlugin.INSTANCE.getLogger().error("读取用户配置失败", e);
+            Ts3EventListenerPlugin.INSTANCE.getLogger().error("读取用户配置失败，使用默认配置覆写用户配置，请修改配置后重启工程", e);
+            dumpConfigByDefault(ymlConfigHandler, new File(configPath));
             return readConfigFromResource();
+        }
+    }
+
+    private static void dumpConfigByDefault(YmlConfigHandler ymlConfigHandler, File configFile){
+        try (InputStream inputStream = Ts3EventListenerPlugin.INSTANCE.getResourceAsStream("config.yml")) {
+            ymlConfigHandler.overwriteConfigFile(configFile, inputStream);
+        }catch (IOException ioe){
+            Ts3EventListenerPlugin.INSTANCE.getLogger().error("用默认配置覆写用户配置失败", ioe);
+            throw new RuntimeException("teamspeak3-event-listener配置文件覆写失败！！！", ioe);
         }
     }
 

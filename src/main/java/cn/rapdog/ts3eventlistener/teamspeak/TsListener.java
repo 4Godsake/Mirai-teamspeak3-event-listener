@@ -12,9 +12,14 @@ public class TsListener {
     public static void startListen() {
         String botName = GlobalData.config.getIgnoreBotName();
         final TS3Api api = TsApiConnection.getInstance().getApi();
-        api.registerAllEvents();
-        api.addTS3Listeners(new TS3ListenerImpl(botName));
-        TsClientWrapper.getInstance().addAll(api.getClients());
-        Ts3EventListenerPlugin.INSTANCE.getLogger().info("tsServer listener started...");
+        if (api != null){
+            api.registerAllEvents();
+            api.addTS3Listeners(new TS3ListenerImpl(botName));
+            TsClientWrapper.getInstance().addAll(api.getClients());
+            Ts3EventListenerPlugin.INSTANCE.getLogger().info("tsServer listener started...");
+        }else {
+            Ts3EventListenerPlugin.INSTANCE.getLogger().error("fail to start tsServerListener, please check your teamspeak host...");
+            throw new RuntimeException("teamspeak服务连接失败");
+        }
     }
 }

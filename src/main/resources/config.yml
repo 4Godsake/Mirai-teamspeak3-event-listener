@@ -1,3 +1,4 @@
+version: 1.0.0
 # teamspeak服务器主机
 host: 127.0.0.1
 # teamspeak服务器端口
@@ -20,9 +21,9 @@ listenEvent:
     noticeFriends: 123456789
     # 根据属性名替换，字段名称被${}包裹，客户端相关信息为${client.XXX},事件相关信息为${event.XXX}，不建议随意修改，字段名称可根据触发相应事件时打印的日志取
     noticeTemplate: # “-”表示数组，请勿删除，存在多个通知模板，随机使用
-      -「${client.CLIENT_NICKNAME}」进入了TS，并高呼：“英雄集结！”
-      -「${client.CLIENT_NICKNAME}」悄悄的进入了TS”
-      -「${client:CLIENT_NICKNAME}」他来了他来了，他来到了TS”
+      - 「${client.CLIENT_NICKNAME}」进入了TS，并高呼：“英雄集结！”
+      - 「${client.CLIENT_NICKNAME}」悄悄的进入了TS”
+      - 「${client.CLIENT_NICKNAME}」他来了他来了，他来到了TS”
   # 用户离开
   clientLeave:
     enable: true
