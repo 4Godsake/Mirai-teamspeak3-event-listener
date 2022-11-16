@@ -1,5 +1,6 @@
 package cn.rapdog.ts3eventlistener.teamspeak;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.rapdog.ts3eventlistener.Ts3EventListenerPlugin;
@@ -13,10 +14,7 @@ import com.github.theholywaffle.teamspeak3.api.wrapper.ClientInfo;
 import net.mamoe.mirai.Bot;
 import net.mamoe.mirai.utils.MiraiLogger;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static cn.rapdog.ts3eventlistener.constant.TsConstants.CLIENT_NICKNAME;
@@ -116,7 +114,7 @@ public class TS3ListenerImpl implements TS3Listener {
         Bot bot = Bot.getInstances().get(0);
         String enableGroups = Optional.ofNullable(config.getNoticeGroups()).orElse("");
         String enableFriends = Optional.ofNullable(config.getNoticeFriends()).orElse("");
-        String noticeTemplate = Optional.ofNullable(config.getNoticeTemplate()).orElse("");
+        List<String> noticeTemplate = Optional.ofNullable(config.getNoticeTemplate()).orElse(new ArrayList<>());
         List<String> eventKeyList = Optional.ofNullable(config.getEventKeyList()).orElse(ListUtil.empty());
         String message = buildMessage(e, c, noticeTemplate, eventKeyList);
         if (StrUtil.isNotEmpty(enableGroups)) {
@@ -138,7 +136,8 @@ public class TS3ListenerImpl implements TS3Listener {
         }
     }
 
-    private String buildMessage(BaseEvent e, Client c, String template, List<String> eventKeys) {
+    private String buildMessage(BaseEvent e, Client c, List<String> templateList, List<String> eventKeys) {
+        String template = getRandomTemplate(templateList);
         for (ClientProperty prop : ClientProperty.values()) {
             String value = Optional.ofNullable(c.get(prop)).orElse("NULL");
             template = StrUtil.replaceIgnoreCase(template, "${client." + prop.getName() + "}", value);
@@ -148,5 +147,13 @@ public class TS3ListenerImpl implements TS3Listener {
             template = StrUtil.replaceIgnoreCase(template, "${event." + eventKey + "}", value);
         }
         return template;
+    }
+
+    private String getRandomTemplate(List<String> templateList){
+        if (CollUtil.isNotEmpty(templateList)){
+            int index = new Random().nextInt(templateList.size());
+            return templateList.get(index);
+        }
+        return "未配置消息模板";
     }
 }

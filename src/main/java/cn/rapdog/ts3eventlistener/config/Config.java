@@ -1,12 +1,14 @@
 package cn.rapdog.ts3eventlistener.config;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * @author rapdog
  */
 @Data
-public class Config {
+@EqualsAndHashCode(callSuper = true)
+public class Config extends BaseConfig{
 
     private String host;
 
