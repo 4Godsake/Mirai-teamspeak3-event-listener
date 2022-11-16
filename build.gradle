@@ -30,6 +30,9 @@ dependencies {
     // https://mvnrepository.com/artifact/cn.hutool/hutool-core
     implementation 'cn.hutool:hutool-core:5.8.8'
     "shadowLink"("cn.hutool:hutool-core")
+    // https://mvnrepository.com/artifact/org.springframework/spring-beans
+    implementation 'org.springframework:spring-beans:5.3.23'
+    "shadowLink"("org.springframework:spring-beans")
 
 
 }

@@ -1,15 +1,16 @@
 package cn.rapdog.ts3eventlistener.utils;
 
+import cn.hutool.core.comparator.VersionComparator;
 import cn.rapdog.ts3eventlistener.Ts3EventListenerPlugin;
 import cn.rapdog.ts3eventlistener.config.Config;
 import cn.rapdog.ts3eventlistener.config.EventConfig;
 import cn.rapdog.ts3eventlistener.config.GlobalData;
-import com.alibaba.fastjson.JSON;
-import org.yaml.snakeyaml.Yaml;
+import cn.rapdog.ts3eventlistener.config.reader.YmlConfigHandler;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 
@@ -27,86 +28,83 @@ public class LoadConfigFile {
             path = "";
         }
         try {
-            createProjectFile();
+            createConfigFile();
             loadConfig();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static void loadConfig() throws IOException {
-        File configFile = Ts3EventListenerPlugin.INSTANCE.resolveConfigFile("config.yml");
-        if (!configFile.exists()) {
-            Ts3EventListenerPlugin.INSTANCE.getLogger().info("configFile doesn't exist,create default config file...");
-            InputStream inputStream = Ts3EventListenerPlugin.INSTANCE.getResourceAsStream("config.yml");
-            if (inputStream != null) {
-                fileOut(configFile, inputStream);
-            } else {
-                Ts3EventListenerPlugin.INSTANCE.getLogger().error("default config file doesn't exist, please contact author");
+    private static void loadConfig() throws IOException {
+        try (InputStream configFromResourceStream = Ts3EventListenerPlugin.INSTANCE.getResourceAsStream("config.yml")) {
+            YmlConfigHandler ymlConfigHandler = new YmlConfigHandler(Config.class);
+            File configFile = Ts3EventListenerPlugin.INSTANCE.resolveConfigFile("config.yml");
+            if (!configFile.exists()) {
+                Ts3EventListenerPlugin.INSTANCE.getLogger().info("configFile doesn't exist,create default config file...");
+                if (configFromResourceStream != null) {
+                    ymlConfigHandler.overwriteConfigFile(configFile, configFromResourceStream);
+                } else {
+                    Ts3EventListenerPlugin.INSTANCE.getLogger().error("default config file doesn't exist, please contact author");
+                }
             }
-        }
-        GlobalData.config = readConfig(configFile.getPath());
-        if (GlobalData.config != null){
-            EventConfig clientJoin = GlobalData.config.getListenEvent().getClientJoin();
-            clientJoin.setEventKeyList(RegxUtil.getKeyListByContent(clientJoin.getNoticeTemplate()));
-            EventConfig clientLeave = GlobalData.config.getListenEvent().getClientLeave();
-            clientLeave.setEventKeyList(RegxUtil.getKeyListByContent(clientLeave.getNoticeTemplate()));
+            Config config = readConfig(configFile.getPath());
+            Config configFromResource = ymlConfigHandler.readConfigFile(configFromResourceStream);
+            // 判断版本，合并配置
+            if (VersionComparator.INSTANCE.compare(config.getVersion(), configFromResource.getVersion()) < 0) {
+                try (InputStream inputStream = Files.newInputStream(configFile.toPath())) {
+                    Map<String, Object> configMap = ymlConfigHandler.mergeConfig(configFromResourceStream, inputStream);
+                    ymlConfigHandler.dumpYml(configFile.getPath(),configMap);
+                    Ts3EventListenerPlugin.INSTANCE.getLogger().info("已合并新版本配置");
+                }
+            }
+            GlobalData.config = readConfig(configFile.getPath());
+            if (GlobalData.config != null) {
+                EventConfig clientJoin = GlobalData.config.getListenEvent().getClientJoin();
+                clientJoin.setEventKeyList(buildTemplateKeyList(clientJoin));
+                EventConfig clientLeave = GlobalData.config.getListenEvent().getClientLeave();
+                clientLeave.setEventKeyList(buildTemplateKeyList(clientLeave));
+            }
+        } catch (IOException ex) {
+            Ts3EventListenerPlugin.INSTANCE.getLogger().error("读取默认配置失败", ex);
+            throw new RuntimeException("teamspeak3-event-listener配置文件读取失败！！！", ex);
         }
     }
 
-    public static void createProjectFile() {
+
+    private static List<String> buildTemplateKeyList(EventConfig ec) {
+        List<String> keyList = new ArrayList<>();
+        ec.getNoticeTemplate().forEach(tmp -> keyList.addAll(RegxUtil.getKeyListByContent(tmp)));
+        return keyList;
+    }
+
+    private static void createConfigFile() {
         File mkdir = new File(path);
         if (!mkdir.exists()) {
-            Ts3EventListenerPlugin.INSTANCE.getLogger().info(path+"不存在");
+            Ts3EventListenerPlugin.INSTANCE.getLogger().info(path + "不存在");
             mkdir.mkdirs();
         }
     }
 
-    public static void fileOut(File file, InputStream inputStream) throws IOException {
-        try (OutputStream output = Files.newOutputStream(file.toPath())) {
-            byte[] bytes = new byte[1024];
-            while (true) {
-                int readLength = inputStream.read(bytes);
-                if (readLength == -1) {
-                    break;
-                }
-                byte[] outData = new byte[readLength];
-                System.arraycopy(bytes, 0, outData, 0, readLength);
-                output.write(outData);
-            }
-            output.flush();
-            inputStream.close();
-        }
-    }
 
-
-    public static Config readConfig(String configPath) {
-        try (InputStream inputStream = Files.newInputStream(Paths.get(configPath))) {
-            return yml2Config(inputStream);
+    private static Config readConfig(String configPath) {
+        YmlConfigHandler ymlConfigHandler = new YmlConfigHandler(Config.class);
+        try {
+            return ymlConfigHandler.readConfigFile(configPath);
         } catch (IOException e) {
             e.printStackTrace();
             Ts3EventListenerPlugin.INSTANCE.getLogger().error("读取用户配置失败", e);
-            try {
-                return readDefaultConfig();
-            } catch (IOException ex) {
-                Ts3EventListenerPlugin.INSTANCE.getLogger().error("读取默认配置失败", ex);
-                return null;
-            }
+            return readConfigFromResource();
         }
     }
 
-    private static Config readDefaultConfig() throws IOException {
+    private static Config readConfigFromResource() {
+        YmlConfigHandler ymlConfigHandler = new YmlConfigHandler(Config.class);
         try (InputStream inputStream = Ts3EventListenerPlugin.INSTANCE.getResourceAsStream("config.yml")) {
-            return yml2Config(inputStream);
+            return ymlConfigHandler.readConfigFile(inputStream);
+        } catch (IOException ex) {
+            Ts3EventListenerPlugin.INSTANCE.getLogger().error("读取默认配置失败", ex);
+            throw new RuntimeException("teamspeak3-event-listener配置文件读取失败！！！", ex);
         }
-
-    }
-
-    private static Config yml2Config(InputStream is){
-        Yaml yaml = new Yaml();
-        Map<String, Object> map = yaml.load(is);
-        Ts3EventListenerPlugin.INSTANCE.getLogger().info("读取配置map为" + map);
-        return JSON.parseObject(JSON.toJSONString(map), Config.class);
     }
 
 }
