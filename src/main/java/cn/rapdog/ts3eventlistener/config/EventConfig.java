@@ -16,7 +16,7 @@ public class EventConfig{
 
     private String noticeFriends;
 
-    private String noticeTemplate;
+    private List<String> noticeTemplate;
 
     private List<String> eventKeyList;
 }
