@@ -1,5 +1,7 @@
-# teamspeak服务器地址
+# teamspeak服务器主机
 host: 127.0.0.1
+# teamspeak服务器端口
+port: 8888
 # query—api账号，该账号需要有ts的serveradmin权限
 account: serveradmin
 # 密码
