@@ -31,7 +31,7 @@ public class TsApiConnection {
 
     private void getConnection(){
         String host = GlobalData.config.getHost();
-        String port = GlobalData.config.getPort();
+        int port = GlobalData.config.getPort();
         String serverAdmin = GlobalData.config.getAccount();
         String password = GlobalData.config.getPassword();
         try {
