@@ -9,6 +9,8 @@ import lombok.Data;
 public class Config {
 
     private String host;
+    
+    private int port;
 
     private String account;
 

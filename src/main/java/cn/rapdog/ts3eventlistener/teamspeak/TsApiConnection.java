@@ -31,11 +31,13 @@ public class TsApiConnection {
 
     private void getConnection(){
         String host = GlobalData.config.getHost();
+        int port = GlobalData.config.getPort();
         String serverAdmin = GlobalData.config.getAccount();
         String password = GlobalData.config.getPassword();
         try {
             final TS3Config config = new TS3Config();
             config.setHost(host);
+            config.setQueryPort(port);
             config.setEnableCommunicationsLogging(true);
             final TS3Query query = new TS3Query(config);
             Ts3EventListenerPlugin.INSTANCE.getLogger().info("TS3Query is connecting...");
